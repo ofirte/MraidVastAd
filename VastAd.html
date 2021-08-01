@@ -45,8 +45,9 @@ function init(){
             let myVastObj=parseXML(request.responseText)
             document.getElementById("container").addEventListener('touchmove', function(event) { event.preventDefault(); }, false);
             doReadyCheck().then(()=>{
+				setupViewport(320)
                 //When mraid is ready create an array of promises with the loaded creative metadata.
-                let loadedCreatives=myVastObj.getCreatives().map(x=>prepareCreative(x))
+                let loadedCreatives=myVastObj.getCreatives()
                 //Play the ad.
                 play(loadedCreatives,myVastObj.impression)
         })}
@@ -58,7 +59,8 @@ function play(loadedCreatives, impression){
     const mapSeries = async (iterable, action) => {
             fireImpression(impression)
             for (const x of iterable) {
-                await x.then((media)=>action(media))
+                let readyCreative = await prepareCreative(x);
+                await action(readyCreative);
             }
             mraid.close()
         }
@@ -79,28 +81,28 @@ function play(loadedCreatives, impression){
 
 function prepareCreative(creative){
     //Loads creative metadata and adjust it's size to screen.
-        let mediaElement=creative.type.includes('video') ? document.createElement("video") :document.createElement("img")
-        mediaElement.src = creative.url
-        mediaElement.onclick = function(){onAdClick(creative.clickThrough,creative.clickTracking)}
-        mediaElement.id="ad"
-        return new Promise((resolve,reject)=>{
-            function adData(event) {
-                mediaElement.tagName === 'VIDEO' ?mediaElement.removeEventListener('loadedmetadata', adData):mediaElement.removeEventListener('load', adData)
-                let width = mediaElement.tagName == 'VIDEO' ? mediaElement.videoWidth : mediaElement.naturalWidth 
-                let height = mediaElement.tagName == 'VIDEO' ? mediaElement.videoHeight : mediaElement.naturalHeight 
-                mediaElement=adjustCreativeElementToDom(width, height, mediaElement)
-                resolve(mediaElement)
+    return new Promise((resolve, reject)=> {
+        let mediaElement = creative.type.includes('video') ? document.createElement("video") :document.createElement("img")
+		mediaElement.onclick = function(){onAdClick(creative.clickThrough,creative.clickTracking)}
+        if (mediaElement.tagName === 'VIDEO') {
+            mediaElement.onloadeddata = function() {
+				mediaElement = adjustCreativeElementToDom(mediaElement.videoWidth, mediaElement.videoHeight, mediaElement)
+				resolve(mediaElement)
             }
-            mediaElement.tagName === 'VIDEO' ?
-            mediaElement.addEventListener('loadedmetadata', adData):
-            mediaElement.addEventListener('load', adData)
-        })
+        } else {
+            mediaElement.onload = function() {
+				mediaElement = adjustCreativeElementToDom(mediaElement.width, mediaElement.height , mediaElement)
+				resolve(mediaElement)
+            }
+        } 
+		mediaElement.src = creative.url
+    })
 }
 
 function adjustCreativeElementToDom(mediaWidth, mediaHeight, mediaElement)
 {	
 	// Right now it is assumed this SDK supports HTML5 video but may not support inline
-    if (mraid.supports("inlineVideo"))
+	if (mraid.supports("inlineVideo"))
 	{
 		// Hide close button
 		mraid.useCustomClose(true);
@@ -124,19 +126,27 @@ function adjustCreativeElementToDom(mediaWidth, mediaHeight, mediaElement)
 	document.getElementById("container").style.height = screenLandscapeHeight + "px";
 	
 	// First video to fit full width and and then scale height
-	var videoWidth = 320;
-	var videoHeight = 180;
+	var videoWidth = mediaWidth;
+	var videoHeight = mediaHeight;
 	var videoRatio = videoWidth/videoHeight;
 	var newWidth = videoWidth;
 	var newHeight = videoHeight;
-
-    newWidth = Math.max(screenLandscapeWidth, videoWidth);
-    newHeight = newWidth/videoRatio;
+	if(videoWidth > screenLandscapeWidth)
+	{
+		newWidth = screenLandscapeWidth;
+		newHeight = newWidth/videoRatio;
+	}
+	else
+	{
+		newWidth = Math.max(screenLandscapeWidth, videoWidth);
+		newHeight = newWidth/videoRatio;
+	}
 	
 	// If scaled height too big then scale back until it fits
 	if (newHeight > screenLandscapeHeight)
 	{
 		videoRatio = videoHeight/videoWidth;
+		
 		newHeight = screenLandscapeHeight;
 		newWidth = newHeight/videoRatio;
 	}
@@ -144,7 +154,8 @@ function adjustCreativeElementToDom(mediaWidth, mediaHeight, mediaElement)
 	// Calculate margins to center
 	var topBottomMargins = (screenLandscapeHeight - newHeight)/2.0;
 	var leftRightMargins = (screenLandscapeWidth - newWidth)/2.0;
-	setupViewport(newWidth)
+	
+	// Update video dimensions
 	mediaElement.style.width = newWidth + "px";
 	mediaElement.style.height = newHeight + "px";
 	mediaElement.style.margin = topBottomMargins + "px " + leftRightMargins + "px";
@@ -153,26 +164,29 @@ function adjustCreativeElementToDom(mediaWidth, mediaHeight, mediaElement)
 
 function playAd(mediaElementDom)
 {
+	document.getElementById("container").innerHTML=""
     document.getElementById("container").appendChild(mediaElementDom);
     if (mediaElementDom.tagName==="VIDEO"){
-        mediaElementDom.WebKitPlaysInline=true
+        mediaElementDom.WebKitPlaysInline = true
         mediaElementDom.play();
         mraid.addEventListener("viewableChange",isPlayedInBackground)
         return new Promise((resolve,reject)=> {
-            if (mraid.supports("inlineVideo"))
-            {
+            if (mraid.supports("inlineVideo")) {
                 // Close video on finish
-                mediaElementDom.addEventListener('ended',()=>resolve())
+                mediaElementDom.addEventListener('ended',() => {
+                    mraid.removeEventListener("viewableChange",isPlayedInBackground)
+                    resolve()
+                })
             }
-        }).then(()=>{
-            mraid.removeEventListener("viewableChange",isPlayedInBackground)
-            document.getElementById("container").innerHTML=""})
+        })
     }
     else{
-        return new Promise((resolve,reject)=> {
-            setTimeout(()=>resolve(),5000)
-            }
-        ).then(()=>document.getElementById("container").innerHTML="")
+        return new Promise((resolve,reject) => {
+            setTimeout(()=>{
+                document.getElementById("container").innerHTML=""
+                resolve()
+            }, 5000)
+        })
     }
 }
 
@@ -199,12 +213,12 @@ function setupViewport(width)
 	{
 		element = document.createElement("meta");
 		element.name = "viewport";
-		element.content = "width=device-width, user-scalable=no";
+		element.content = "width="+width+", user-scalable=no";
 		document.getElementsByTagName('head')[0].appendChild(element);
 	}
 	else
 	{
-		element.content = "width=device-width, user-scalable=no";
+		element.content = "width="+width+", user-scalable=no";
 	}
 }
 
