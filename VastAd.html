@@ -47,14 +47,14 @@ function init(){
             doReadyCheck().then(()=>{
 				setupViewport(320)
                 //When mraid is ready create an array of promises with the loaded creative metadata.
-                let loadedCreatives=myVastObj.getCreatives()
+                let Creatives=myVastObj.getCreatives()
                 //Play the ad.
-                play(loadedCreatives,myVastObj.impression)
+                play(Creatives,myVastObj.impression)
         })}
     }
 }
 
-function play(loadedCreatives, impression){
+function play(creatives, impression){
     //Plays the creative and the companion ad by that order.
     const mapSeries = async (iterable, action) => {
             fireImpression(impression)
@@ -69,13 +69,13 @@ function play(loadedCreatives, impression){
 		mraid.addEventListener("viewableChange", function(display){
             if(display){
                 mraid.removeEventListener("viewableChange",this)
-                mapSeries(loadedCreatives,playAd)
+                mapSeries(creatives,playAd)
             }
         }); 
 	}
 	else
 	{
-        mapSeries(loadedCreatives,playAd)
+        mapSeries(creatives,playAd)
 	}
 }
 
