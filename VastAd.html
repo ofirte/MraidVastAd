@@ -83,7 +83,7 @@ function prepareCreative(creative){
     //Loads creative metadata and adjust it's size to screen.
     return new Promise((resolve, reject)=> {
         let mediaElement = creative.type.includes('video') ? document.createElement("video") :document.createElement("img")
-		mediaElement.onclick = function(){onAdClick(creative.clickThrough,creative.clickTracking)}
+	mediaElement.onclick = function(){onAdClick(creative.clickThrough,creative.clickTracking)}
         if (mediaElement.tagName === 'VIDEO') {
             mediaElement.onloadeddata = function() {
 				mediaElement = adjustCreativeElementToDom(mediaElement.videoWidth, mediaElement.videoHeight, mediaElement)
