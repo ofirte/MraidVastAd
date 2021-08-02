@@ -86,13 +86,13 @@ function prepareCreative(creative){
 	mediaElement.onclick = function(){onAdClick(creative.clickThrough,creative.clickTracking)}
         if (mediaElement.tagName === 'VIDEO') {
             mediaElement.onloadeddata = function() {
-				mediaElement = adjustCreativeElementToDom(mediaElement.videoWidth, mediaElement.videoHeight, mediaElement)
-				resolve(mediaElement)
+		mediaElement = adjustCreativeElementToDom(mediaElement.videoWidth, mediaElement.videoHeight, mediaElement)
+		resolve(mediaElement)
             }
         } else {
             mediaElement.onload = function() {
-				mediaElement = adjustCreativeElementToDom(mediaElement.width, mediaElement.height , mediaElement)
-				resolve(mediaElement)
+		mediaElement = adjustCreativeElementToDom(mediaElement.width, mediaElement.height , mediaElement)
+		resolve(mediaElement)
             }
         } 
 		mediaElement.src = creative.url
@@ -165,29 +165,29 @@ function adjustCreativeElementToDom(mediaWidth, mediaHeight, mediaElement)
 function playAd(mediaElementDom)
 {
 	document.getElementById("container").innerHTML=""
-    document.getElementById("container").appendChild(mediaElementDom);
-    if (mediaElementDom.tagName==="VIDEO"){
-        mediaElementDom.WebKitPlaysInline = true
-        mediaElementDom.play();
-        mraid.addEventListener("viewableChange",isPlayedInBackground)
-        return new Promise((resolve,reject)=> {
-            if (mraid.supports("inlineVideo")) {
-                // Close video on finish
-                mediaElementDom.addEventListener('ended',() => {
-                    mraid.removeEventListener("viewableChange",isPlayedInBackground)
-                    resolve()
-                })
-            }
-        })
-    }
-    else{
-        return new Promise((resolve,reject) => {
-            setTimeout(()=>{
-                document.getElementById("container").innerHTML=""
-                resolve()
-            }, 5000)
-        })
-    }
+	document.getElementById("container").appendChild(mediaElementDom);
+	if (mediaElementDom.tagName==="VIDEO"){
+		mediaElementDom.WebKitPlaysInline = true
+		mediaElementDom.play();
+		mraid.addEventListener("viewableChange",isPlayedInBackground)
+		return new Promise((resolve,reject)=> {
+		    if (mraid.supports("inlineVideo")) {
+			// Close video on finish
+			mediaElementDom.addEventListener('ended',() => {
+			    mraid.removeEventListener("viewableChange",isPlayedInBackground)
+			    resolve()
+			})
+		    }
+		})
+	}
+	else{
+		return new Promise((resolve,reject) => {
+		    setTimeout(()=>{
+			document.getElementById("container").innerHTML=""
+			resolve()
+		    }, 5000)
+		})
+	}
 }
 
 function doReadyCheck()
